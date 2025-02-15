@@ -1,92 +1,92 @@
-// Función flecha para poder crear una pregunta.
-const crearPregunta = (textoPregunta, opciones) => {
-  return {
-    textoPregunta: textoPregunta,
-    opciones: opciones,
-    resultados: {}, // Inicia el objeto de resultados vacío
-  };
-};
+// Me costo muchisimo llegar a esto asique emplee la ayuda de coopilot, tremenda herramienta, este es el camino que me recomendo:
+// crearEncuesta → ejecutarEncuesta → procesarRondaVotacion → registrarVoto → mostrarResultadosFinales
 
-// Función flecha para que contenga todas las preguntas de la encuesta.
-const crearEncuesta = (preguntas) => {
-  return {
-    preguntas: preguntas, // Una lista de todas las preguntas
-  };
-};
+// El primer paso fue crear la constante de las preguntas
+const crearPregunta = (textoPregunta, opciones) => ({
+    textoPregunta,
+    opciones: opciones.map(opcion => opcion.trim()),
+    resultados: {}
+});
 
-// Función para agregar un voto a una pregunta en una encuesta
-function agregarVoto(pregunta, opcionSeleccionada) {
-  // pregunta ¿Cual es tu color favorito? (negro, blanco , rojo, verde)
-  if (pregunta.opciones.includes(opcionSeleccionada)) {
-    if (pregunta.resultados[opcionSeleccionada]) {
-      pregunta.resultados[opcionSeleccionada]++;
-    } else {
-      pregunta.resultados[opcionSeleccionada] = 1;
+// Luego la forma en como se registra el voto
+const registrarVoto = (pregunta, opcionSeleccionada) => {
+    if (!pregunta.opciones.includes(opcionSeleccionada)) {
+        console.log("La opción seleccionada no es válida.");
+        return pregunta;
     }
-    mostrarResultados(pregunta);
-  } else {
-    console.log("La opción seleccionada no es válida.");
-  }
-}
+    
+    return {
+        ...pregunta,
+        resultados: {
+            ...pregunta.resultados,
+            [opcionSeleccionada]: (pregunta.resultados[opcionSeleccionada] || 0) + 1
+        }
+    };
+};
 
-// Función para mostrar los resultados de una pregunta
-function mostrarResultados(pregunta) {
-  console.log(`Resultados para la pregunta: "${pregunta.textoPregunta}":`);
-  for (let opcion of pregunta.opciones) {
-    console.log(
-      `Opción "${opcion}": ${pregunta.resultados[opcion] || 0} votos`
+// Funciones para manejar la encuesta
+const crearEncuesta = (preguntas) => ({
+    preguntas,
+    resultados: []
+});
+
+const obtenerVoto = (pregunta) => {
+    const opcionSeleccionada = prompt(
+        `Pregunta: ${pregunta.textoPregunta}\nSeleccione una opción (${pregunta.opciones.join(", ")}):`
     );
-  }
-}
+    return opcionSeleccionada ? opcionSeleccionada.trim() : null;
+};
 
-// Función para que un usuario pueda votar en una pregunta
-function votar(pregunta) {
-  const opcionSeleccionada = prompt(
-    `Pregunta: ${
-      pregunta.textoPregunta
-    }\nSeleccione una opción (${pregunta.opciones.join(", ")}):
-    `
-  );
+const procesarRondaVotacion = (encuesta) => {
+    const nuevasPreguntas = encuesta.preguntas.map(pregunta => {
+        const voto = obtenerVoto(pregunta);
+        return voto ? registrarVoto(pregunta, voto) : pregunta;
+    });
+    
+    return {
+        ...encuesta,
+        preguntas: nuevasPreguntas
+    };
+};
 
-  if (opcionSeleccionada !== null) {
-    agregarVoto(pregunta, opcionSeleccionada.trim());
-  } else {
-    console.log("Votación cancelada.");
-  }
-}
+// Utilice el mismo metodo de mostrar resultados que en el proyecto de POO
+const mostrarResultadosFinales = (encuesta) => {
+    console.log("\n=== RESULTADOS FINALES DE LA ENCUESTA ===");
+    const resultadosTabla = encuesta.preguntas.map(pregunta => ({
+        Pregunta: pregunta.textoPregunta,
+        ...pregunta.opciones.reduce((acc, opcion) => ({
+            ...acc,
+            [opcion]: pregunta.resultados[opcion] || 0
+        }), {})
+    }));
+    
+    console.table(resultadosTabla);
+    return encuesta;
+};
 
-// Función para poder ejecutar la encuesta
-function ejecutarPrograma() {
-  const numeroDePreguntas = parseInt(
-    prompt("¿Cuántas preguntas desea realizar?")
-  );
-  const preguntas = [];
+// LLamamaos a la funcion ejecutarEncuesta y le pasamos las preguntas 
+const ejecutarEncuesta = (encuestaInicial) => {
+    let encuestaActual = encuestaInicial;
+    let seguirVotando = true;
 
-  for (let i = 0; i < numeroDePreguntas; i++) {
-    const textoPregunta = prompt(`Ingrese la pregunta ${i + 1}:`);
-    const opciones = prompt(
-      `Ingrese las opciones para la pregunta ${i + 1} separadas por coma (,):`
-    )
-      .split(",")
-      .map((opcion) => opcion.trim());
-    const pregunta = crearPregunta(textoPregunta, opciones);
-    preguntas.push(pregunta);
-  }
-
-  const encuesta = crearEncuesta(preguntas);
-
-  let seguirVotando = true;
-  while (seguirVotando) {
-    for (let i = 0; i < numeroDePreguntas; i++) {
-      votar(encuesta.preguntas[i]);
+    while (seguirVotando) {
+        encuestaActual = procesarRondaVotacion(encuestaActual);
+        seguirVotando = confirm("¿Desea seguir votando?");
     }
-    seguirVotando = confirm("¿Desea seguir votando?");
-  }
 
-  // Mostrar los resultados finales
-  console.log("Resultados finales de la encuesta:");
-  encuesta.preguntas.forEach(mostrarResultados);
-}
+    return mostrarResultadosFinales(encuestaActual);
+};
 
-// Llamar a la función ejecutarPrograma
-ejecutarPrograma();
+// Preguntas 
+const preguntasIniciales = [
+    crearPregunta("¿Cuál es la capital de Francia?", ["París", "Londres", "Roma"]),
+    crearPregunta("¿Cuál es la capital de Inglaterra?", ["Madrid", "Londres", "Berlín"]),
+    crearPregunta("¿Cuál es la capital de España?", ["Madrid", "Barcelona", "Sevilla"]),
+    crearPregunta("¿Cuál es la capital de Italia?", ["Milán", "Roma", "Nápoles"]),
+    crearPregunta("¿Cuál es la capital de Alemania?", ["Hamburgo", "Berlín", "Múnich"]),
+    crearPregunta("¿Cuál es la capital de Rusia?", ["Moscú", "San Petersburgo", "Sochi"]),
+    crearPregunta("¿Cuál es la capital de Japón?", ["Osaka", "Tokio", "Yokohama"]),
+    crearPregunta("¿Cuál es la capital de Australia?", ["Sydney", "Melbourne", "Canberra"])
+];
+
+ejecutarEncuesta(crearEncuesta(preguntasIniciales));
